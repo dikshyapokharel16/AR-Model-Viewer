@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <title>Hello Neighbour — AR Build Guides</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./vendor/three/three.module.js",
+        "three/addons/": "./vendor/three/addons/"
+      }
+    }
+  </script>
+  <!-- Native AR handoff (Quick Look / Scene Viewer) — reused from Agentic Square's proven pattern -->
+  <script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer@4.3.1/dist/model-viewer.min.js"></script>
+</head>
+<body>
+  <!-- Landing screen -->
+  <section id="landing" class="screen">
+    <h1>Hello Neighbour</h1>
+    <p>Point your camera at a build manual's cover page to see it in AR.</p>
+    <button id="start-scanning-btn" class="btn-primary">Start Scanning</button>
+  </section>
+
+  <!-- Live AR camera view -->
+  <section id="ar-view" class="screen hidden">
+    <div id="ar-container"></div>
+    <div id="ar-hint" class="ar-hint">Point your camera at a manual's cover page</div>
+    <div id="ar-buttons" class="ar-buttons hidden">
+      <button id="view-in-ar-btn" class="btn-primary">View in AR</button>
+    </div>
+  </section>
+
+  <!-- QR fallback for devices that can't do native AR -->
+  <section id="qr-fallback" class="screen hidden">
+    <button id="qr-close-btn" class="btn-close" aria-label="Close">&times;</button>
+    <p>This device can't place AR directly. Scan this code with a phone to place it in your space:</p>
+    <div id="qr-canvas-container"></div>
+  </section>
+
+  <!-- Hidden model-viewer used only to trigger native AR (Quick Look / Scene Viewer) -->
+  <model-viewer
+    id="native-ar-viewer"
+    ar
+    ar-modes="webxr scene-viewer quick-look"
+    ar-scale="fixed"
+    camera-controls
+    style="position:absolute; width:1px; height:1px; opacity:0; pointer-events:none;"
+  ></model-viewer>
+
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <script type="module" src="main.js"></script>
+</body>
+</html>

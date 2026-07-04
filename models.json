@@ -1,0 +1,49 @@
+[
+  {
+    "targetIndex": 0,
+    "id": "04-stepped-brick-seating",
+    "name": "Stepped Brick Seating",
+    "glb": "assets/models/04-stepped-brick-seating/model.glb",
+    "usdz": "assets/models/04-stepped-brick-seating/model.usdz",
+    "coverImage": "assets/targets/source-images/04-stepped-brick-seating-cover.png",
+    "manualDir": "assets/manuals/04-stepped-brick-seating",
+    "manualGrid": [
+      ["step-06.jpg", "step-07.jpg", "step-08.jpg", "step-01.jpg"],
+      ["step-02.jpg", "step-03.jpg", "step-04.jpg", "step-05.jpg"]
+    ],
+    "coverGridPosition": { "row": 0, "col": 3 }
+  },
+  {
+    "targetIndex": null,
+    "id": "01-pallet-planters",
+    "name": "Pallet Planters",
+    "glb": null,
+    "usdz": null,
+    "coverImage": null,
+    "manualDir": "assets/manuals/01-pallet-planters",
+    "manualGrid": null,
+    "coverGridPosition": null
+  },
+  {
+    "targetIndex": null,
+    "id": "02-pallet-seatings",
+    "name": "Pallet Seatings",
+    "glb": null,
+    "usdz": null,
+    "coverImage": null,
+    "manualDir": "assets/manuals/02-pallet-seatings",
+    "manualGrid": null,
+    "coverGridPosition": null
+  },
+  {
+    "targetIndex": null,
+    "id": "03-bench",
+    "name": "Bench",
+    "glb": null,
+    "usdz": null,
+    "coverImage": null,
+    "manualDir": "assets/manuals/03-bench",
+    "manualGrid": null,
+    "coverGridPosition": null
+  }
+]
