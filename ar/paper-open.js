@@ -15,8 +15,7 @@ const clamp01 = (t) => Math.min(Math.max(t, 0), 1);
 
 // Slower, deliberately-paced choreography (seconds) — fast enough to not
 // drag, slow enough that each stage actually reads as its own motion.
-const POPUP_DURATION = 1.0;
-const POPUP_START_DELAY = 0.15;
+const START_DELAY = 0.15; // brief pause after recognition before anything moves
 const COLUMN_UNFOLD_STEP = 0.5; // stagger between each column hinge starting
 const COLUMN_UNFOLD_DURATION = 0.9;
 const ROW_UNFOLD_DELAY = 0.4; // gap after the last column settles, before the row unfolds
@@ -24,19 +23,24 @@ const ROW_UNFOLD_DURATION = 1.0;
 
 // Z-separation between stacked/folded panels. Generous on purpose — this is
 // what stops the flat, near-coincident folded panels from z-fighting
-// (flickering) against each other and against the pop-up hinge's own panel,
-// and it's small enough to be invisible once everything is unfolded flat.
+// (flickering) against each other while folded, and it's small enough to be
+// invisible once everything is unfolded flat.
 const Z_STEP = 0.004;
 
 /**
- * Plays the "manual pops up and unfolds" reveal:
- *  1. The whole folded sheet pops up from lying flat on the marker to
- *     standing vertical, hinged along its bottom edge — like a pop-up book
- *     page opening.
- *  2. Once standing, the column strip fans open in a true alternating
- *     zigzag (mountain/valley, matching a real accordion-folded sheet) out
- *     from the cover.
- *  3. The second row book-folds open below the now-open top row.
+ * Plays the "manual unfolds" reveal, entirely flat in the marker's own
+ * plane — the cover never leaves the position the camera found it at:
+ *  1. The column strip fans open in a true alternating zigzag
+ *     (mountain/valley, matching a real accordion-folded sheet) out from
+ *     the cover, lying flat the whole time.
+ *  2. The second row book-folds open below the now-open top row, also flat.
+ *
+ * Deliberately has no "pop up to standing" stage: an earlier version hinged
+ * the whole assembly upright before unfolding, which (a) dragged the still
+ * folded-away pages through view early since their hidden rotations
+ * compounded with the parent's, and (b) separated the unfolding pages from
+ * the real printed cover, pushing the cover out of frame. Real paper
+ * unfolds flat from a stack — it doesn't need to stand up first.
  *
  * The cover cell itself is never rendered — the real printed page is
  * already visible through the camera at that position, so only the *other*
@@ -72,15 +76,32 @@ export async function playManualUnfold({ anchorGroup, modelConfig }) {
     // panels that hang from a hinge above them); otherwise centered.
     if (pivotAtTop) geom.translate(0, -cellH / 2, 0);
     geom.translate(0, 0, zOffset);
-    const mat = new THREE.MeshBasicMaterial({
+
+    // Separate front/back materials (rather than one DoubleSide material)
+    // so a page mid-fold shows a blank paper back instead of a mirrored,
+    // backwards-reading copy of the front artwork.
+    const polygonOffsetFactor = zOffset * 1000;
+    const frontMat = new THREE.MeshBasicMaterial({
       map: texture,
-      side: THREE.DoubleSide,
+      side: THREE.FrontSide,
       toneMapped: false,
       polygonOffset: true,
-      polygonOffsetFactor: zOffset * 1000,
+      polygonOffsetFactor,
       polygonOffsetUnits: 1,
     });
-    return new THREE.Mesh(geom, mat);
+    const backMat = new THREE.MeshBasicMaterial({
+      color: 0xf2ede2,
+      side: THREE.BackSide,
+      toneMapped: false,
+      polygonOffset: true,
+      polygonOffsetFactor,
+      polygonOffsetUnits: 1,
+    });
+
+    const group = new THREE.Group();
+    group.add(new THREE.Mesh(geom, frontMat));
+    group.add(new THREE.Mesh(geom, backMat));
+    return group;
   }
 
   const rowHinges = []; // every column's book-fold hinge, animated together in phase 3
@@ -108,16 +129,9 @@ export async function playManualUnfold({ anchorGroup, modelConfig }) {
   // page already shows it) — only its hidden second-row page renders.
   const coverUnit = buildColumnUnit(coverCol, 0, false);
 
-  // The whole sheet pops up hinged along the cover's bottom edge. Rotation 0
-  // here is flat, exactly matching the marker's plane (verified: hinge.position
-  // + Rx(0)*contentOffset = (0,0,0), i.e. coincides with the anchor origin).
-  const popupHinge = new THREE.Group();
-  popupHinge.position.set(0, -cellH / 2, 0);
-  const popupContent = new THREE.Group();
-  popupContent.position.set(0, cellH / 2, 0);
-  popupHinge.add(popupContent);
-  popupContent.add(coverUnit);
-  anchorGroup.add(popupHinge);
+  // Attaches directly at the anchor origin — the cover cell already
+  // coincides with the marker's plane, so no offset is needed to line it up.
+  anchorGroup.add(coverUnit);
 
   // Remaining columns, chained outward from the cover in a single direction
   // (matches this sheet's real fold: cover at one end of the row), each
@@ -148,7 +162,8 @@ export async function playManualUnfold({ anchorGroup, modelConfig }) {
     parentUnit = unit;
   });
 
-  const columnsEnd = POPUP_START_DELAY + POPUP_DURATION + (colHinges.length - 1) * COLUMN_UNFOLD_STEP + COLUMN_UNFOLD_DURATION;
+  const columnsStart = START_DELAY;
+  const columnsEnd = columnsStart + (colHinges.length - 1) * COLUMN_UNFOLD_STEP + COLUMN_UNFOLD_DURATION;
   const rowStartTime = columnsEnd + ROW_UNFOLD_DELAY;
   const totalDuration = rowStartTime + ROW_UNFOLD_DURATION;
 
@@ -159,10 +174,6 @@ export async function playManualUnfold({ anchorGroup, modelConfig }) {
     if (done) return true;
     elapsed += dt;
 
-    const popupT = clamp01((elapsed - POPUP_START_DELAY) / POPUP_DURATION);
-    popupHinge.rotation.x = (Math.PI / 2) * easeInOutCubic(popupT);
-
-    const columnsStart = POPUP_START_DELAY + POPUP_DURATION;
     colHinges.forEach(({ hinge, sign }, i) => {
       const t = clamp01((elapsed - columnsStart - i * COLUMN_UNFOLD_STEP) / COLUMN_UNFOLD_DURATION);
       hinge.rotation.y = Math.PI * sign * (1 - easeInOutCubic(t));
@@ -180,8 +191,8 @@ export async function playManualUnfold({ anchorGroup, modelConfig }) {
   }
 
   function dispose() {
-    anchorGroup.remove(popupHinge);
-    popupHinge.traverse((child) => {
+    anchorGroup.remove(coverUnit);
+    coverUnit.traverse((child) => {
       if (child.isMesh) {
         child.geometry.dispose();
         child.material.dispose();
