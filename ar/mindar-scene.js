@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { MindARThree } from "../vendor/mind-ar/mindar-image-three.prod.js";
 import { playManualUnfold } from "./paper-open.js";
+import { smoothAnchorPose } from "./pose-smoothing.js";
 
 /**
  * Wires up MindAR image tracking for every model that has a real targetIndex
@@ -58,6 +59,11 @@ export async function createArScene({ container, models, onActiveModelChange }) 
       // lastTargetIndex (and therefore the "View in AR" binding) intentionally
       // persists here — a visitor naturally looks away from the page to tap it.
     };
+
+    // MindAR's raw per-frame tracking estimate is noisy enough that the
+    // overlay visibly trembles against the real page even when the camera is
+    // held still — smooth it so the manual reads as locked in place.
+    smoothAnchorPose(anchor);
 
     return { anchor, modelConfig };
   });
