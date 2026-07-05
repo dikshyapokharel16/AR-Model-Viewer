@@ -15,7 +15,7 @@ import * as THREE from "three";
  * image — tune `smoothing` down for less jitter (more lag) or up for less
  * lag (more jitter).
  */
-export function smoothAnchorPose(anchor, smoothing = 0.3) {
+export function smoothAnchorPose(anchor, smoothing = 0.15) {
   const rawPos = new THREE.Vector3();
   const rawQuat = new THREE.Quaternion();
   const rawScale = new THREE.Vector3();
