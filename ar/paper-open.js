@@ -117,6 +117,13 @@ export async function playManualUnfold({ anchorGroup, modelConfig }) {
     const bottomHinge = new THREE.Group();
     bottomHinge.position.set(0, -cellH / 2, 0);
     bottomHinge.rotation.x = Math.PI; // starts folded up behind the top panel, hidden
+    // Not just folded but undrawn: at the cover column there's no virtual top
+    // panel to hide behind (that cell is real camera passthrough), so this
+    // would otherwise sit as a solid blank plane directly over the real
+    // printed page. At the other columns it would instead z-fight against
+    // their top panel, which sits at the same depth. Either way, staying
+    // fully undrawn until its own reveal begins (in update()) is correct.
+    bottomHinge.visible = false;
     group.add(bottomHinge);
     bottomHinge.add(makePanel(textures[otherRow][col], zOffset, true));
 
@@ -152,6 +159,7 @@ export async function playManualUnfold({ anchorGroup, modelConfig }) {
     // valley, mountain, ...) instead of rolling every panel the same way.
     const sign = i % 2 === 0 ? 1 : -1;
     hinge.rotation.y = Math.PI * sign;
+    hinge.visible = false; // same reasoning as bottomHinge.visible above
     parentUnit.add(hinge);
 
     const unit = buildColumnUnit(col, Z_STEP * (i + 1), true);
@@ -175,13 +183,19 @@ export async function playManualUnfold({ anchorGroup, modelConfig }) {
     elapsed += dt;
 
     colHinges.forEach(({ hinge, sign }, i) => {
-      const t = clamp01((elapsed - columnsStart - i * COLUMN_UNFOLD_STEP) / COLUMN_UNFOLD_DURATION);
+      const startTime = columnsStart + i * COLUMN_UNFOLD_STEP;
+      hinge.visible = elapsed >= startTime; // undrawn until the instant its own reveal begins
+      const t = clamp01((elapsed - startTime) / COLUMN_UNFOLD_DURATION);
       hinge.rotation.y = Math.PI * sign * (1 - easeInOutCubic(t));
     });
 
+    const rowVisible = elapsed >= rowStartTime;
     const rowT = clamp01((elapsed - rowStartTime) / ROW_UNFOLD_DURATION);
     const rowAngle = Math.PI * (1 - easeInOutCubic(rowT));
-    for (const bottomHinge of rowHinges) bottomHinge.rotation.x = rowAngle;
+    for (const bottomHinge of rowHinges) {
+      bottomHinge.visible = rowVisible;
+      bottomHinge.rotation.x = rowAngle;
+    }
 
     if (elapsed >= totalDuration) {
       done = true;
